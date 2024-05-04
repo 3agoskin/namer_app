@@ -56,48 +56,113 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var favorites = appState.favorites;
     Widget page;
     switch (selectedIndex) {
       case 0:
         page = GeneratorPage();
         break;
       case 1:
-        page = Placeholder();
+        page = FavoritePage();
         break;
       default:
         throw UnimplementedError('No widget for $selectedIndex');
     }
 
-    return Scaffold(
-      body: Row(
-        children: [
-          SafeArea(
-            child: NavigationRail(
-              extended: false,
-              destinations: [
-                NavigationRailDestination(
-                  icon: Icon(Icons.home),
-                  label: Text('Home'),
+    var theme = Theme.of(context);
+    TextStyle getTextStyle(int index) {
+      return theme.textTheme.labelMedium!.copyWith(
+          fontWeight:
+              index == selectedIndex ? FontWeight.bold : FontWeight.normal);
+    }
+    // var style = theme.textTheme.displayMedium!.copyWith(
+    //     color: isFavorite
+    //         ? theme.colorScheme.onPrimary
+    //         : theme.colorScheme.primary);
+
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constraints.maxWidth > 600,
+                minExtendedWidth: 170,
+                leading: FloatingActionButton.extended(
+                  elevation: 0,
+                  focusElevation: 0,
+                  hoverElevation: 0,
+                  isExtended: constraints.maxWidth > 600,
+                  onPressed: () => print('FAB'),
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  label: Text('Create pair'),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.favorite),
-                  label: Text('Favorites'),
+                destinations: [
+                  NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      label: Text(
+                        'Home',
+                        style: getTextStyle(0),
+                      ),
+                      selectedIcon: Icon(Icons.home)),
+                  NavigationRailDestination(
+                      disabled: favorites.isEmpty,
+                      icon: favorites.isEmpty
+                          ? Icon(Icons.exposure_zero)
+                          : Icon(Icons.favorite_outline),
+                      label: Text(
+                          favorites.isEmpty
+                              ? 'No favorites'
+                              : 'Favorites (${favorites.length})',
+                          style: getTextStyle(1)),
+                      selectedIcon: Icon(Icons.favorite)),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: page,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class FavoritePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var favorites = appState.favorites;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          for (var pair in favorites)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(25),
+                child: Text(
+                  pair.asLowerCase,
+                  semanticsLabel: pair.asPascalCase,
                 ),
-              ],
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                setState(() {
-                  selectedIndex = value;
-                });
-              },
+              ),
             ),
-          ),
-          Expanded(
-            child: Container(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              child: page,
-            ),
-          ),
         ],
       ),
     );
@@ -121,6 +186,8 @@ class GeneratorPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Text('Click on card to go next ${appState.favorites}'),
+          SizedBox(height: 80),
           BigCard(appState: appState),
           SizedBox(height: 10),
           Row(
@@ -130,12 +197,7 @@ class GeneratorPage extends StatelessWidget {
                 appState: appState,
               ),
               SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              ),
+              NextButton(appState: appState),
             ],
           ),
         ],
@@ -144,8 +206,8 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
-class LikeButton extends StatelessWidget {
-  const LikeButton({
+class NextButton extends StatelessWidget {
+  const NextButton({
     super.key,
     required this.appState,
   });
@@ -154,15 +216,65 @@ class LikeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pair = appState.current;
-    final isFavorite = appState.favorites.contains(pair);
-    IconData icon = isFavorite ? Icons.cancel_outlined : Icons.favorite_outline;
+    return ElevatedButton(
+      onPressed: () {
+        appState.getNext();
+      },
+      child: Text('Next'),
+    );
+  }
+}
+
+class LikeButton extends StatefulWidget {
+  const LikeButton({
+    super.key,
+    required this.appState,
+  });
+
+  final MyAppState appState;
+
+  @override
+  State<LikeButton> createState() => _LikeButtonState();
+}
+
+class _LikeButtonState extends State<LikeButton> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    void _incrementEnter(PointerEvent details) {
+      setState(() {
+        _hover = true;
+      });
+    }
+
+    void _incrementExit(PointerEvent details) {
+      setState(() {
+        _hover = false;
+      });
+    }
+
+    final pair = widget.appState.current;
+    final isFavorite = widget.appState.favorites.contains(pair);
+    Icon setIcon() {
+      IconData icon;
+      if (_hover) {
+        icon = isFavorite ? Icons.cancel : Icons.favorite;
+      } else {
+        icon = isFavorite ? Icons.cancel_outlined : Icons.favorite_outline;
+      }
+      return Icon(icon);
+    }
+
     String text = isFavorite ? 'Remove' : 'Like';
 
-    return ElevatedButton.icon(
-        onPressed: () => appState.toggleFavorite(),
-        icon: Icon(icon),
-        label: Text(text));
+    return MouseRegion(
+      onEnter: (event) => _incrementEnter(event),
+      onExit: (event) => _incrementExit(event),
+      child: ElevatedButton.icon(
+          onPressed: () => widget.appState.toggleFavorite(),
+          icon: setIcon(),
+          label: Text(text)),
+    );
   }
 }
 
@@ -185,18 +297,26 @@ class BigCard extends StatelessWidget {
             ? theme.colorScheme.onPrimary
             : theme.colorScheme.primary);
 
-    return Card(
-      color: isFavorite ? theme.colorScheme.primary : theme.colorScheme.surface,
-      child: InkWell(
-        splashColor: Colors.transparent,
-        onTap: () => appState.getNext(),
-        // mouseCursor: MouseCursor,
-        child: Padding(
-          padding: const EdgeInsets.all(25),
-          child: Text(
-            pair.asLowerCase,
-            style: style,
-            semanticsLabel: pair.asPascalCase,
+    return Tooltip(
+      message: 'Press and get new pair of words',
+      exitDuration: Duration(seconds: 1),
+      verticalOffset: 60,
+      waitDuration: Duration(seconds: 1),
+      preferBelow: false,
+      child: Card(
+        color:
+            isFavorite ? theme.colorScheme.primary : theme.colorScheme.surface,
+        child: InkWell(
+          splashColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          onTap: () => appState.getNext(),
+          child: Padding(
+            padding: const EdgeInsets.all(25),
+            child: Text(
+              pair.asLowerCase,
+              style: style,
+              semanticsLabel: pair.asPascalCase,
+            ),
           ),
         ),
       ),
