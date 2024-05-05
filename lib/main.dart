@@ -1,6 +1,11 @@
+import 'dart:collection';
+import 'dart:html';
+
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 
 void main() {
   runApp(MyApp());
@@ -18,7 +23,8 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blue), // fromRGBO(17, 151, 228, 1)
+              seedColor:
+                  Color.fromRGBO(17, 151, 228, 1)), // fromRGBO(17, 151, 228, 1)
         ),
         home: MyHomePage(),
       ),
@@ -27,14 +33,14 @@ class MyApp extends StatelessWidget {
 }
 
 class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
+  var current = WordPair.random().asString;
 
   void getNext() {
-    current = WordPair.random();
+    current = WordPair.random().asString;
     notifyListeners();
   }
 
-  var favorites = <WordPair>[];
+  var favorites = <String>[];
 
   void toggleFavorite() {
     if (favorites.contains(current)) {
@@ -42,6 +48,15 @@ class MyAppState extends ChangeNotifier {
     } else {
       favorites.add(current);
     }
+    notifyListeners();
+  }
+
+  void removeFavorite(String pair) {
+    if (!favorites.contains(pair)) {
+      throw UnimplementedError(
+          'Try remove $pair from favorites, there is no such a pair');
+    }
+    favorites.remove(pair);
     notifyListeners();
   }
 }
@@ -76,10 +91,6 @@ class _MyHomePageState extends State<MyHomePage> {
           fontWeight:
               index == selectedIndex ? FontWeight.bold : FontWeight.normal);
     }
-    // var style = theme.textTheme.displayMedium!.copyWith(
-    //     color: isFavorite
-    //         ? theme.colorScheme.onPrimary
-    //         : theme.colorScheme.primary);
 
     return LayoutBuilder(builder: (context, constraints) {
       return Scaffold(
@@ -87,24 +98,40 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             SafeArea(
               child: NavigationRail(
+                backgroundColor: Color.fromRGBO(245, 251, 255, 1),
+                indicatorColor: Color.fromRGBO(173, 219, 246, 1),
                 extended: constraints.maxWidth > 600,
                 minExtendedWidth: 170,
                 leading: FloatingActionButton.extended(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(2000)),
                   elevation: 0,
                   focusElevation: 0,
                   hoverElevation: 0,
+                  highlightElevation: 0,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  splashColor: Color.fromRGBO(255, 224, 72, 1),
                   isExtended: constraints.maxWidth > 600,
                   onPressed: () => print('FAB'),
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  label: Text('Create pair'),
+                  backgroundColor: Color.fromRGBO(255, 243, 183, 1),
+                  label: Text(
+                    'Create pair',
+                    style: getTextStyle(selectedIndex),
+                  ),
                   icon: Icon(
                     Icons.edit_outlined,
-                    color: theme.colorScheme.onPrimaryContainer,
+                    color: Color.fromRGBO(0, 39, 61, 1),
+                    // opticalSize: 2,
+                    size: 22,
                   ),
                 ),
                 destinations: [
                   NavigationRailDestination(
-                      icon: Icon(Icons.home_outlined),
+                      icon: Icon(
+                        Icons.home_outlined,
+                        color: Color.fromRGBO(0, 39, 61, 1),
+                      ),
                       label: Text(
                         'Home',
                         style: getTextStyle(0),
@@ -113,12 +140,20 @@ class _MyHomePageState extends State<MyHomePage> {
                   NavigationRailDestination(
                       disabled: favorites.isEmpty,
                       icon: favorites.isEmpty
-                          ? Icon(Icons.exposure_zero)
-                          : Icon(Icons.favorite_outline),
-                      label: Text(
-                          favorites.isEmpty
-                              ? 'No favorites'
-                              : 'Favorites (${favorites.length})',
+                          ? Icon(Icons.cancel_outlined,
+                              color: favorites.isEmpty
+                                  ? Color.fromRGBO(198, 229, 247, 1)
+                                  : Color.fromRGBO(0, 39, 61, 1))
+                          : Badge(
+                              textStyle: theme.textTheme.labelSmall!
+                                  .copyWith(fontWeight: FontWeight.bold),
+                              textColor: theme.colorScheme.onPrimary,
+                              backgroundColor: Colors.blueAccent.shade700,
+                              label: Text(
+                                  '${favorites.length > 9 ? '9+' : favorites.length}'),
+                              child: Icon(Icons.favorite_outline),
+                            ),
+                      label: Text(favorites.isEmpty ? 'Empty' : 'Favorites',
                           style: getTextStyle(1)),
                       selectedIcon: Icon(Icons.favorite)),
                 ],
@@ -132,7 +167,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             Expanded(
               child: Container(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: Color.fromRGBO(229, 246, 255, 1),
                 child: page,
               ),
             ),
@@ -150,16 +185,16 @@ class FavoritePage extends StatelessWidget {
     var favorites = appState.favorites;
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
         children: <Widget>[
           for (var pair in favorites)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(25),
                 child: Text(
-                  pair.asLowerCase,
-                  semanticsLabel: pair.asPascalCase,
+                  pair,
+                  semanticsLabel: pair,
                 ),
               ),
             ),
@@ -184,10 +219,11 @@ class GeneratorPage extends StatelessWidget {
 
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text('Click on card to go next ${appState.favorites}'),
-          SizedBox(height: 80),
+          SizedBox(height: 30),
+          Onbourding(appState: appState),
+          SizedBox(height: 15),
           BigCard(appState: appState),
           SizedBox(height: 10),
           Row(
@@ -206,6 +242,86 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
+class Onbourding extends StatelessWidget {
+  const Onbourding({
+    super.key,
+    required this.appState,
+  });
+
+  final MyAppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = appState.current;
+    final favorites = appState.favorites;
+    final isFavorite = favorites.contains(pair);
+    final isOneFavoriteSaved = favorites.length > 1 && !isFavorite;
+    var theme = Theme.of(context);
+    var headerStyle = theme.textTheme.headlineSmall!.copyWith(
+      color: Color.fromRGBO(17, 151, 228, 1),
+      fontWeight: FontWeight.bold,
+    );
+    var leadStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: Color.fromRGBO(17, 151, 228, 1),
+      fontWeight: FontWeight.bold,
+    );
+    return Card.filled(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+          child: Column(
+            children: [
+              Text(
+                'Welcome to Namer App',
+                style: headerStyle,
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              isOneFavoriteSaved
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.favorite,
+                          color: Color.fromRGBO(17, 151, 228, 1),
+                          size: 18,
+                        ),
+                        SizedBox(
+                          width: 8,
+                        ),
+                        Text(
+                          'Now you can see what you have saved',
+                          style: leadStyle,
+                        ),
+                      ],
+                    )
+                  : Text(
+                      isFavorite
+                          ? '${favorites.length < 2 ? 'But if you change your mind, ' : 'Remeber, '}you can remove it!'
+                          : 'Here you can like a pair and then save it',
+                      style: leadStyle,
+                    ),
+              SizedBox(
+                height: 15,
+              ),
+              Transform.rotate(
+                  angle: (isOneFavoriteSaved ? 360 : 270) * math.pi / 180,
+                  child: Icon(
+                    isOneFavoriteSaved
+                        ? Icons.done_all
+                        : isFavorite
+                            ? Icons.cancel_outlined
+                            : Icons.arrow_back,
+                    color: Color.fromRGBO(17, 151, 228, 1),
+                    size: 36,
+                  ))
+            ],
+          ),
+        ));
+  }
+}
+
 class NextButton extends StatelessWidget {
   const NextButton({
     super.key,
@@ -216,11 +332,28 @@ class NextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pair = appState.current;
+    final isFavorite = appState.favorites.contains(pair);
+    final removeFavorite = appState.removeFavorite;
     return ElevatedButton(
       onPressed: () {
+        if (isFavorite) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Saved pair'),
+            backgroundColor: Colors.blueAccent.shade700,
+            behavior: SnackBarBehavior.fixed,
+            action: SnackBarAction(
+                backgroundColor: Colors.white,
+                textColor: Colors.blueAccent.shade700,
+                label: 'Remove $pair',
+                onPressed: () {
+                  removeFavorite(pair);
+                }),
+          ));
+        }
         appState.getNext();
       },
-      child: Text('Next'),
+      child: Text(isFavorite ? 'Save' : 'Next'),
     );
   }
 }
@@ -293,9 +426,11 @@ class BigCard extends StatelessWidget {
 
     var theme = Theme.of(context);
     var style = theme.textTheme.displayMedium!.copyWith(
+        letterSpacing: 1,
+        fontWeight: FontWeight.bold,
         color: isFavorite
             ? theme.colorScheme.onPrimary
-            : theme.colorScheme.primary);
+            : Color.fromRGBO(17, 151, 228, 1));
 
     return Tooltip(
       message: 'Press and get new pair of words',
@@ -304,18 +439,20 @@ class BigCard extends StatelessWidget {
       waitDuration: Duration(seconds: 1),
       preferBelow: false,
       child: Card(
-        color:
-            isFavorite ? theme.colorScheme.primary : theme.colorScheme.surface,
+        color: isFavorite ? Colors.blueAccent.shade700 : Colors.white,
         child: InkWell(
           splashColor: Colors.transparent,
           hoverColor: Colors.transparent,
-          onTap: () => appState.getNext(),
+          onTap: () {
+            if (isFavorite) return;
+            appState.getNext();
+          },
           child: Padding(
             padding: const EdgeInsets.all(25),
             child: Text(
-              pair.asLowerCase,
+              pair,
               style: style,
-              semanticsLabel: pair.asPascalCase,
+              semanticsLabel: pair,
             ),
           ),
         ),
