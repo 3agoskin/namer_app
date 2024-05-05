@@ -1,9 +1,5 @@
-import 'dart:collection';
-import 'dart:html';
-
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
@@ -48,6 +44,11 @@ class MyAppState extends ChangeNotifier {
     } else {
       favorites.add(current);
     }
+    notifyListeners();
+  }
+
+  void addFavorite(String pair) {
+    favorites.add(pair);
     notifyListeners();
   }
 
@@ -113,7 +114,65 @@ class _MyHomePageState extends State<MyHomePage> {
                   focusColor: Colors.transparent,
                   splashColor: Color.fromRGBO(255, 224, 72, 1),
                   isExtended: constraints.maxWidth > 600,
-                  onPressed: () => print('FAB'),
+                  onPressed: () {
+                    showDialog(
+                        barrierDismissible: false,
+                        barrierColor: Colors.white,
+                        context: context,
+                        builder: (BuildContext context) {
+                          var appState = context.watch<MyAppState>();
+                          var theme = Theme.of(context);
+                          return Scaffold(
+                            body: SizedBox(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: BackButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(72),
+                                      child: TextField(
+                                        onSubmitted: (pair) {
+                                          if (pair.length > 2) {
+                                            appState.addFavorite(pair);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(snackBarNewPair(
+                                                    theme: theme,
+                                                    pair: pair,
+                                                    appState: appState));
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                        decoration: InputDecoration(
+                                            border: OutlineInputBorder(
+                                                borderSide: BorderSide(
+                                                    width: 5,
+                                                    color: Colors
+                                                        .blueAccent.shade700),
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(200)),
+                                                gapPadding: 100),
+                                            hintText: 'Creat your pair!'),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
+                          );
+                        });
+                  },
                   backgroundColor: Color.fromRGBO(255, 243, 183, 1),
                   label: Text(
                     'Create pair',
@@ -178,6 +237,41 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
+SnackBar snackBarNewPair(
+    {required String pair,
+    required MyAppState appState,
+    required ThemeData theme}) {
+  var pairStyle = theme.textTheme.bodyMedium!.copyWith(
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 0.2,
+  );
+  return SnackBar(
+    padding: EdgeInsets.fromLTRB(12, 18, 12, 18),
+    content: Row(
+      children: [
+        Text('Saved'),
+        SizedBox(
+          width: 6,
+        ),
+        Text(
+          pair,
+          style: pairStyle,
+        )
+      ],
+    ),
+    backgroundColor: Colors.blueAccent.shade700,
+    behavior: SnackBarBehavior.fixed,
+    action: SnackBarAction(
+        backgroundColor: Colors.white,
+        textColor: Colors.blueAccent.shade700,
+        label: 'Remove pair',
+        onPressed: () {
+          appState.removeFavorite(pair);
+        }),
+  );
+}
+
 class FavoritePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -208,14 +302,6 @@ class GeneratorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
 
     return Center(
       child: Column(
@@ -335,21 +421,12 @@ class NextButton extends StatelessWidget {
     final pair = appState.current;
     final isFavorite = appState.favorites.contains(pair);
     final removeFavorite = appState.removeFavorite;
+    var theme = Theme.of(context);
     return ElevatedButton(
       onPressed: () {
         if (isFavorite) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Saved pair'),
-            backgroundColor: Colors.blueAccent.shade700,
-            behavior: SnackBarBehavior.fixed,
-            action: SnackBarAction(
-                backgroundColor: Colors.white,
-                textColor: Colors.blueAccent.shade700,
-                label: 'Remove $pair',
-                onPressed: () {
-                  removeFavorite(pair);
-                }),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+              snackBarNewPair(pair: pair, appState: appState, theme: theme));
         }
         appState.getNext();
       },
