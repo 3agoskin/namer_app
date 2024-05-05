@@ -1,5 +1,6 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
@@ -74,23 +75,31 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     var favorites = appState.favorites;
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = FavoritePage();
-        break;
-      default:
-        throw UnimplementedError('No widget for $selectedIndex');
+
+    Widget page(BoxConstraints constraints) {
+      switch (selectedIndex) {
+        case 0:
+          return GeneratorPage();
+        case 1:
+          return FavoritePage(
+            constraints: constraints,
+          );
+        default:
+          throw UnimplementedError('No widget for $selectedIndex');
+      }
+      ;
     }
 
     var theme = Theme.of(context);
-    TextStyle getTextStyle(int index) {
+    TextStyle getTextStyle(int index, {bool isFAB = false}) {
+      var isSelected = index == selectedIndex;
       return theme.textTheme.labelMedium!.copyWith(
-          fontWeight:
-              index == selectedIndex ? FontWeight.bold : FontWeight.normal);
+          color: isFAB
+              ? Colors.white
+              : isSelected
+                  ? Colors.black
+                  : Colors.black45,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.bold);
     }
 
     return LayoutBuilder(builder: (context, constraints) {
@@ -103,86 +112,55 @@ class _MyHomePageState extends State<MyHomePage> {
                 indicatorColor: Color.fromRGBO(173, 219, 246, 1),
                 extended: constraints.maxWidth > 600,
                 minExtendedWidth: 170,
-                leading: FloatingActionButton.extended(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(2000)),
-                  elevation: 0,
-                  focusElevation: 0,
-                  hoverElevation: 0,
-                  highlightElevation: 0,
-                  hoverColor: Colors.transparent,
-                  focusColor: Colors.transparent,
-                  splashColor: Color.fromRGBO(255, 224, 72, 1),
-                  isExtended: constraints.maxWidth > 600,
-                  onPressed: () {
-                    showDialog(
-                        barrierDismissible: false,
-                        barrierColor: Colors.white,
-                        context: context,
-                        builder: (BuildContext context) {
-                          var appState = context.watch<MyAppState>();
-                          var theme = Theme.of(context);
-                          return Scaffold(
-                            body: SizedBox(
-                              child: Column(
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: BackButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      ),
-                                    ],
+                trailing: Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: FloatingActionButton.extended(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(2000)),
+                        elevation: 0,
+                        focusElevation: 0,
+                        hoverElevation: 0,
+                        highlightElevation: 0,
+                        hoverColor: Colors.transparent,
+                        focusColor: Colors.transparent,
+                        splashColor: Colors.blueAccent.shade700,
+                        isExtended: constraints.maxWidth > 600,
+                        backgroundColor: Colors.blueAccent.shade400,
+                        onPressed: () {
+                          showDialog(
+                              barrierDismissible: true,
+                              barrierColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                var appState = context.watch<MyAppState>();
+                                var theme = Theme.of(context);
+                                return Scaffold(
+                                  drawerEdgeDragWidth: 200,
+                                  backgroundColor:
+                                      Colors.white.withOpacity(0.3),
+                                  body: CreateNewPairDialog(
+                                    appState: appState,
+                                    theme: theme,
+                                    constraints: constraints,
                                   ),
-                                  Center(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(72),
-                                      child: TextField(
-                                        onSubmitted: (pair) {
-                                          if (pair.length > 2) {
-                                            appState.addFavorite(pair);
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(snackBarNewPair(
-                                                    theme: theme,
-                                                    pair: pair,
-                                                    appState: appState));
-                                            Navigator.pop(context);
-                                          }
-                                        },
-                                        decoration: InputDecoration(
-                                            border: OutlineInputBorder(
-                                                borderSide: BorderSide(
-                                                    width: 5,
-                                                    color: Colors
-                                                        .blueAccent.shade700),
-                                                borderRadius: BorderRadius.all(
-                                                    Radius.circular(200)),
-                                                gapPadding: 100),
-                                            hintText: 'Creat your pair!'),
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
-                          );
-                        });
-                  },
-                  backgroundColor: Color.fromRGBO(255, 243, 183, 1),
-                  label: Text(
-                    'Create pair',
-                    style: getTextStyle(selectedIndex),
-                  ),
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    color: Color.fromRGBO(0, 39, 61, 1),
-                    // opticalSize: 2,
-                    size: 22,
+                                );
+                              });
+                        },
+                        label: Text(
+                          'Create pair',
+                          style: getTextStyle(selectedIndex, isFAB: true),
+                        ),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: Colors.white,
+                          // opticalSize: 2,
+                          size: 22,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 destinations: [
@@ -227,13 +205,159 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: Container(
                 color: Color.fromRGBO(229, 246, 255, 1),
-                child: page,
+                child: page(constraints),
               ),
             ),
           ],
         ),
       );
     });
+  }
+}
+
+class CreateNewPairDialog extends StatelessWidget {
+  const CreateNewPairDialog({
+    super.key,
+    required this.appState,
+    required this.theme,
+    required this.constraints,
+  });
+
+  final MyAppState appState;
+  final ThemeData theme;
+  final BoxConstraints constraints;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.blueAccent.shade700,
+      shadowColor: Colors.transparent,
+      child: SizedBox(
+        height: 500,
+        width: constraints.maxWidth > 600 ? 600 : null,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: BackButton(
+                    color: Colors.white,
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(72),
+                child: CreateNewPairField(appState: appState, theme: theme),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CreateNewPairField extends StatefulWidget {
+  const CreateNewPairField({
+    super.key,
+    required this.appState,
+    required this.theme,
+  });
+
+  final MyAppState appState;
+  final ThemeData theme;
+
+  @override
+  State<CreateNewPairField> createState() => _CreateNewPairFieldState();
+}
+
+class _CreateNewPairFieldState extends State<CreateNewPairField> {
+  String pairInput = '';
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var decoration = InputDecoration(
+        hintStyle:
+            widget.theme.textTheme.titleMedium!.copyWith(color: Colors.white60),
+        labelStyle:
+            widget.theme.textTheme.titleMedium!.copyWith(color: Colors.white),
+        counterStyle:
+            widget.theme.textTheme.titleMedium!.copyWith(color: Colors.white),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(200)),
+          borderSide: BorderSide(width: 2, color: Colors.white),
+        ),
+        enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(width: 1, color: Colors.blueAccent.shade100),
+            borderRadius: BorderRadius.all(Radius.circular(200)),
+            gapPadding: 100),
+        border: OutlineInputBorder(
+            borderSide: BorderSide(width: 2, color: Colors.white),
+            borderRadius: BorderRadius.all(Radius.circular(200)),
+            gapPadding: 100),
+        hintText: 'Creat your pair!');
+
+    return Column(
+      children: [
+        TextField(
+            style: widget.theme.textTheme.titleMedium!
+                .copyWith(color: Colors.white),
+            cursorColor: Colors.white,
+            autofocus: true,
+            onSubmitted: (pair) {
+              if (pair.length > 2) {
+                widget.appState.addFavorite(pair);
+                ScaffoldMessenger.of(context).showSnackBar(snackBarNewPair(
+                    theme: widget.theme,
+                    pair: pair,
+                    appState: widget.appState));
+                Navigator.pop(context);
+              }
+            },
+            decoration: decoration,
+            onChanged: (value) {
+              setState(() {
+                pairInput = value;
+              });
+            }),
+        SizedBox(
+          height: 15,
+        ),
+        ElevatedButton(
+            style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all(
+                    pairInput.length > 2 ? Colors.white : Colors.white54),
+                foregroundColor: MaterialStateProperty.all(
+                  pairInput.length > 2
+                      ? Colors.blueAccent.shade400
+                      : Colors.blueAccent.shade200,
+                ),
+                padding: MaterialStateProperty.all(EdgeInsets.all(18)),
+                elevation: MaterialStateProperty.all(0),
+                textStyle: MaterialStateProperty.all(
+                    theme.textTheme.headlineSmall!.copyWith(
+                  fontWeight: FontWeight.bold,
+                ))),
+            onPressed: () {
+              if (pairInput.length > 2) {
+                widget.appState.addFavorite(pairInput);
+                ScaffoldMessenger.of(context).showSnackBar(snackBarNewPair(
+                    theme: widget.theme,
+                    pair: pairInput,
+                    appState: widget.appState));
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Add to favorite'))
+      ],
+    );
   }
 }
 
@@ -247,7 +371,7 @@ SnackBar snackBarNewPair(
     letterSpacing: 0.2,
   );
   return SnackBar(
-    padding: EdgeInsets.fromLTRB(12, 18, 12, 18),
+    padding: EdgeInsets.fromLTRB(18, 24, 12, 24),
     content: Row(
       children: [
         Text('Saved'),
@@ -272,32 +396,6 @@ SnackBar snackBarNewPair(
   );
 }
 
-class FavoritePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var favorites = appState.favorites;
-
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        children: <Widget>[
-          for (var pair in favorites)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(25),
-                child: Text(
-                  pair,
-                  semanticsLabel: pair,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class GeneratorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -308,7 +406,7 @@ class GeneratorPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           SizedBox(height: 30),
-          Onbourding(appState: appState),
+          OnbourdingGeneratorPage(appState: appState),
           SizedBox(height: 15),
           BigCard(appState: appState),
           SizedBox(height: 10),
@@ -328,8 +426,8 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
-class Onbourding extends StatelessWidget {
-  const Onbourding({
+class OnbourdingGeneratorPage extends StatelessWidget {
+  const OnbourdingGeneratorPage({
     super.key,
     required this.appState,
   });
@@ -365,20 +463,20 @@ class Onbourding extends StatelessWidget {
                 height: 15,
               ),
               isOneFavoriteSaved
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
+                  ? Wrap(
+                      spacing: 12,
+                      alignment: WrapAlignment.center,
+                      // mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.favorite,
                           color: Color.fromRGBO(17, 151, 228, 1),
                           size: 18,
                         ),
-                        SizedBox(
-                          width: 8,
-                        ),
                         Text(
                           'Now you can see what you have saved',
                           style: leadStyle,
+                          softWrap: true,
                         ),
                       ],
                     )
@@ -387,6 +485,7 @@ class Onbourding extends StatelessWidget {
                           ? '${favorites.length < 2 ? 'But if you change your mind, ' : 'Remeber, '}you can remove it!'
                           : 'Here you can like a pair and then save it',
                       style: leadStyle,
+                      textAlign: TextAlign.center,
                     ),
               SizedBox(
                 height: 15,
@@ -532,6 +631,201 @@ class BigCard extends StatelessWidget {
               semanticsLabel: pair,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class FavoritePage extends StatelessWidget {
+  FavoritePage({super.key, required this.constraints});
+
+  BoxConstraints constraints;
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var favorites = appState.favorites;
+    var theme = Theme.of(context);
+    var isDesktop = constraints.maxWidth > 600;
+    var style = isDesktop
+        ? theme.textTheme.headlineLarge!
+            .copyWith(color: Colors.white, fontWeight: FontWeight.bold)
+        : theme.textTheme.headlineMedium!
+            .copyWith(color: Colors.white, fontWeight: FontWeight.bold);
+
+    return Center(
+      child: Column(
+        children: [
+          SizedBox(height: 30),
+          DescriptionFavoritePage(appState: appState, isDesktop: isDesktop),
+          SizedBox(height: 15),
+          Padding(
+            padding: EdgeInsets.all(isDesktop ? 24 : 12),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: <Widget>[
+                for (var pair in favorites)
+                  FavoriteCard(
+                      isDesktop: isDesktop,
+                      pair: pair,
+                      style: style,
+                      appState: appState),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class FavoriteCard extends StatelessWidget {
+  const FavoriteCard({
+    super.key,
+    required this.isDesktop,
+    required this.pair,
+    required this.style,
+    required this.appState,
+  });
+
+  final bool isDesktop;
+  final String pair;
+  final TextStyle style;
+  final MyAppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card.filled(
+      color: Colors.blueAccent.shade700,
+      child: InkWell(
+        onTap: () {
+          showDialog(
+              barrierDismissible: true,
+              barrierColor: Colors.transparent,
+              context: context,
+              builder: (BuildContext context) {
+                var appState = context.watch<MyAppState>();
+                var theme = Theme.of(context);
+                var stylePair = theme.textTheme.displayMedium!.copyWith(
+                    color: Color.fromRGBO(17, 151, 228, 1),
+                    fontWeight: FontWeight.bold);
+                return Scaffold(
+                    drawerEdgeDragWidth: 200,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    body: Dialog(
+                      backgroundColor: Colors.white,
+                      surfaceTintColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      child: SizedBox(
+                        height: 500,
+                        width: 500,
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: CloseButton(
+                                    color: Color.fromRGBO(17, 151, 228, 1),
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Center(
+                              child: Padding(
+                                  padding: const EdgeInsets.all(72),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        pair,
+                                        style: stylePair,
+                                      ),
+                                      SizedBox(height: 20),
+                                      ElevatedButton(
+                                          onPressed: () {
+                                            appState.removeFavorite(pair);
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text('Remove'))
+                                    ],
+                                  )),
+                            )
+                          ],
+                        ),
+                      ),
+                    ));
+              });
+        },
+        child: Padding(
+          padding: EdgeInsets.all(isDesktop ? 24 : 18),
+          child: Text(
+            pair,
+            semanticsLabel: pair,
+            style: style,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DescriptionFavoritePage extends StatelessWidget {
+  const DescriptionFavoritePage(
+      {super.key, required this.isDesktop, required this.appState});
+
+  final bool isDesktop;
+  final MyAppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var headerStyle = theme.textTheme.headlineSmall!.copyWith(
+      color: Color.fromRGBO(17, 151, 228, 1),
+      fontWeight: FontWeight.bold,
+    );
+    var leadStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: Color.fromRGBO(17, 151, 228, 1),
+      fontWeight: FontWeight.bold,
+    );
+    final totalFavorites = appState.favorites.length;
+    return Card.filled(
+      color: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+        child: Column(
+          children: [
+            Text(
+              totalFavorites > 1
+                  ? 'Here are all your $totalFavorites favorite pairs'
+                  : 'Here are yout favorite pair',
+              style: headerStyle,
+              textAlign: TextAlign.center,
+              softWrap: true,
+            ),
+            SizedBox(
+              height: 15,
+            ),
+            Text(
+              'But if you want to delete your pair, just tap on it!',
+              style: leadStyle,
+              textAlign: TextAlign.center,
+              softWrap: true,
+            ),
+            SizedBox(
+              height: 15,
+            ),
+            Transform.rotate(
+                angle: -25 * math.pi / 180,
+                child: Icon(
+                  Icons.touch_app_outlined,
+                  color: Colors.blueAccent.shade200,
+                  size: 52,
+                ))
+          ],
         ),
       ),
     );
